@@ -1,0 +1,67 @@
+---
+  name: publish
+  
+  on:
+    workflow_dispatch:
+  
+  jobs:
+    build-qcow:
+      runs-on: ubuntu-latest
+      container:
+        image: ghcr.io/refenv/cijoe-docker:latest
+        options: --privileged
+
+      strategy:
+        matrix:
+          image:
+          - { os: "freebsd", ver: "14.2" }
+
+      steps:
+      - name: Grab source
+        uses: actions/checkout@v4.1.7
+
+      - name: Add repos to git-config safe.directory
+        run: |
+          git config --global --add safe.directory $(pwd)
+
+      - name: Runner-prep, clean up self-hosted left-overs
+        run: |
+          pkill -f qemu || true
+          rm -rf $HOME/guests 
+          rm -rf $HOME/images 
+          rm -r /tmp/artifacts || true
+          mkdir -p /tmp/artifacts || true
+          rm -rf *
+          ls -lh
+
+      - name: Install python-venv
+        run: |
+          apt-get install -qy python3-venv
+  
+      - name: pipx, Install
+        run: |
+          pipx inject cijoe boto3
+          pipx inject cijoe botocore
+
+      - name: Setup CIJOE and pipx
+        run: |
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Build
+        env:
+          S3_KEY: ${{ secrets.S3_KEY }}
+          S3_SECRET: ${{ secrets.S3_SECRET }}
+          S3_ENDPOINT_URL: ${{ secrets.S3_ENDPOINT_URL }}
+          S3_REGION: ${{ secrets.S3_REGION }}
+          S3_BUCKET: refenv
+        run: |
+          cd src && cijoe workflows/install-and-upload.yaml \
+          --monitor -l \
+          --config configs/${{ matrix.image.os }}-${{ matrix.image.ver }}.toml
+          
+      - name: Upload CIJOE report
+        uses: actions/upload-artifact@v4.4.0
+        if: always()
+        with:
+          path: src/cijoe-output
+          name: cloudinit-report-${{ matrix.image.os }}-${{ matrix.image.ver }}
