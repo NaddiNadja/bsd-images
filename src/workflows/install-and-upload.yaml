@@ -1,0 +1,21 @@
+---
+doc: |
+  Build a BSD cloud-init image
+  ============================
+  
+  This workflow takes a BSD image with nuage-init installed (also
+  called BASIC-CLOUDINIT), initialises it, installs cloud-init and
+  uploads it to a S3 bucket.
+
+steps:
+- name: install_cloudinit
+  uses: install_cloudinit
+
+- name: s3_file_upload
+  uses: s3_file_upload
+  with:
+    bucket: '{{ local.env.S3_BUCKET }}'
+    endpoint-url: '{{ local.env.S3_ENDPOINT_URL }}'
+    region: '{{ local.env.S3_REGION }}'
+    path: '{{ config["system-imaging"]["bsd-image"]["cloud"]["path"] }}'
+    object-key: 'cloudinit/{{ config["system-imaging"]["bsd-image"]["object_key"] }}'
