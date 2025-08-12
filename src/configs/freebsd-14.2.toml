@@ -1,0 +1,66 @@
+# The SSH options are passed verbatim to paramiko; see
+# https://www.paramiko.org/ This is common CIJOE infrastructure
+#
+# Used by: cijoe.run() / cijoe.get() / cijoe.put()
+[cijoe.transport.qemu_guest]
+username = "root"
+password = "root"
+hostname = "localhost"
+port = 4200
+
+[cijoe.transport.default_freebsd]
+username = "freebsd"
+password = "freebsd"
+hostname = "localhost"
+port = 4200
+
+[cijoe.workflow]
+fail_fast=true
+
+# Used by: the qemu.*.py scripts
+[qemu]
+img_bin = "qemu-img"
+
+[qemu.systems.x86_64]
+bin = "qemu-system-x86_64"
+
+# Used by: qemu.guest_initialize.py, qemu.guest_start.py, and qemu.guest_kill.py
+[qemu.guests.generic-bios-kvm-x86_64]
+path = "{{ local.env.HOME }}/guests/generic-bios-kvm-x86_64"
+
+# Label of the qemu-system emulerator to use; see "qemu.systems"
+system_label = "x86_64"
+
+[qemu.guests.generic-bios-kvm-x86_64.system_args]
+# Keyword arguments: joined onto the form: "-cpu host -smp 4 -m 4" etc.
+kwa = {cpu = "host", smp = 4, m = "6G", accel = "kvm"}
+
+# Raw arguments: passed without modification to qemu-system-{arch}
+raw = """\
+-M "type=q35,kernel_irqchip=split" \
+-device "intel-iommu,pt=on,intremap=on" \
+"""
+
+# TCP_FORWARD: Setup ssh forward from host to guest
+tcp_forward = {host = 4200, guest = 22}
+
+# HOST_SHARE: Shares the given folder with the guest via 9p
+host_share = "{{ local.env.HOME }}"
+
+#
+# SYSTEM_IMAGING: A collection of system images in the form of cloudimages,
+# diskimages, and docker images.
+#
+[system-imaging.bsd-image]
+system_label = "x86_64"
+object_key = "freebsd_14.2_x86_64.qcow"
+
+[system-imaging.bsd-image.nuage]
+url = "https://download.freebsd.org/releases/VM-IMAGES/14.2-RELEASE/amd64/Latest/FreeBSD-14.2-RELEASE-amd64-BASIC-CLOUDINIT.zfs.qcow2.xz"
+path = "{{ local.env.HOME }}/system_imaging/nuage/FreeBSD-14.2-RELEASE-amd64-BASIC-CLOUDINIT.zfs.qcow2.xz"
+decompressed_path = "{{ local.env.HOME }}/system_imaging/nuage/FreeBSD-14.2-RELEASE-amd64-BASIC-CLOUDINIT.zfs.qcow2"
+metadata_path = "{{ resources.auxiliary['cloudinit-freebsd-14.2-metadata'] }}"
+userdata_path = "{{ resources.auxiliary['cloudinit-freebsd-14.2-userdata'] }}"
+
+[system-imaging.bsd-image.cloud]
+path = "{{ local.env.HOME }}/system_imaging/cloud/freebsd_14.2_x86_64.qcow2"
